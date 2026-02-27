@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lexical Decision Task</title>
+  <script src="https://unpkg.com/jspsych@7.3.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.2"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.2"></script>
+  <link href="https://unpkg.com/jspsych@7.3.0/css/jspsych.css" rel="stylesheet" />
+</head>
+<body></body>
+
+<script>
+
+// Initialize jsPsych
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    jsPsych.data.get().localSave('csv','lexical_decision_data.csv');
+  }
+});
+
+// ---------------------------
+// STIMULI
+// ---------------------------
+
+const stimuli = [
+
+  // High-frequency words
+  { stimulus: "house", correct_response: "f", condition: "high" },
+  { stimulus: "water", correct_response: "f", condition: "high" },
+  { stimulus: "music", correct_response: "f", condition: "high" },
+  { stimulus: "light", correct_response: "f", condition: "high" },
+
+  // Low-frequency words
+  { stimulus: "lilac", correct_response: "f", condition: "low" },
+  { stimulus: "cobweb", correct_response: "f", condition: "low" },
+  { stimulus: "amber", correct_response: "f", condition: "low" },
+  { stimulus: "lantern", correct_response: "f", condition: "low" },
+
+  // Nonwords
+  { stimulus: "blont", correct_response: "j", condition: "nonword" },
+  { stimulus: "mirtle", correct_response: "j", condition: "nonword" },
+  { stimulus: "sproke", correct_response: "j", condition: "nonword" },
+  { stimulus: "drindle", correct_response: "j", condition: "nonword" }
+
+];
+
+// ---------------------------
+// INSTRUCTIONS
+// ---------------------------
+
+const instructions = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: `
+    <h2>Lexical Decision Task</h2>
+    <p>You will see a string of letters.</p>
+    <p>If it is a REAL English word, press <strong>F</strong>.</p>
+    <p>If it is NOT a real word, press <strong>J</strong>.</p>
+    <p>Please respond as quickly and accurately as possible.</p>
+    <p><br>Press any key to begin practice.</p>
+  `
+};
+
+// ---------------------------
+// FIXATION
+// ---------------------------
+
+const fixation = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "<div style='font-size:40px;'>+</div>",
+  choices: "NO_KEYS",
+  trial_duration: 500
+};
+
+// ---------------------------
+// TRIAL
+// ---------------------------
+
+const lexical_trial = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: function() {
+    return `<div style='font-size:50px;'>${jsPsych.timelineVariable('stimulus')}</div>`;
+  },
+  choices: ["f","j"],
+  trial_duration: 2000,
+  data: {
+    condition: jsPsych.timelineVariable('condition'),
+    correct_response: jsPsych.timelineVariable('correct_response')
+  },
+  on_finish: function(data) {
+    data.correct = data.response === data.correct_response;
+  }
+};
+
+// ---------------------------
+// PRACTICE BLOCK
+// ---------------------------
+
+const practice_stimuli = [
+  { stimulus: "table", correct_response: "f", condition: "practice" },
+  { stimulus: "plone", correct_response: "j", condition: "practice" }
+];
+
+const practice_block = {
+  timeline: [fixation, lexical_trial],
+  timeline_variables: practice_stimuli,
+  randomize_order: true
+};
+
+const practice_end = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: "<p>Practice complete.<br><br>Press any key to begin the experiment.</p>"
+};
+
+// ---------------------------
+// MAIN EXPERIMENT
+// ---------------------------
+
+const main_block = {
+  timeline: [fixation, lexical_trial],
+  timeline_variables: stimuli,
+  randomize_order: true
+};
+
+// ---------------------------
+// END SCREEN
+// ---------------------------
+
+const end_screen = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: function() {
+
+    let accuracy = Math.round(
+      jsPsych.data.get().filter({condition: ["high","low","nonword"]})
+      .select('correct').mean() * 100
+    );
+
+    let meanRT = Math.round(
+      jsPsych.data.get().filter({correct: true})
+      .select('rt').mean()
+    );
+
+    return `
+      <h2>Finished!</h2>
+      <p>Your accuracy: ${accuracy}%</p>
+      <p>Your mean reaction time: ${meanRT} ms</p>
+      <p>Data has been downloaded.</p>
+      <p>Thank you for participating!</p>
+      <p><br>Press any key to exit.</p>
+    `;
+  }
+};
+
+// ---------------------------
+// TIMELINE
+// ---------------------------
+
+const timeline = [];
+
+timeline.push(instructions);
+timeline.push(practice_block);
+timeline.push(practice_end);
+timeline.push(main_block);
+timeline.push(end_screen);
+
+// Run experiment
+jsPsych.run(timeline);
+
+</script>
+</html>
